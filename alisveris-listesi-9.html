@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alışveriş Listesi</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Display:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue: #003087;
+  --yellow: #FFDA1A;
+  --green: #1a6b3c;
+  --border: #ddd;
+  --now-bg: #fffbe6;
+  --later-bg: #f0f4ff;
+  --muted: #888;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans Display', sans-serif;
+  background: #f4f4ef;
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+
+/* SYNC STATUS */
+.sync-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #ccc; display: inline-block; margin-right: 4px;
+  transition: background 0.3s;
+}
+.sync-dot.ok { background: #22c55e; }
+.sync-dot.err { background: #ef4444; }
+.sync-dot.loading { background: #f59e0b; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.sync-label { color: rgba(255,255,255,0.8); font-size: 11px; }
+
+header {
+  background: var(--blue);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  flex-wrap: wrap;
+}
+.logo {
+  background: var(--yellow);
+  color: var(--blue);
+  font-weight: 900;
+  font-size: 16px;
+  letter-spacing: 2px;
+  padding: 3px 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+header h1 { color: white; font-size: 15px; font-weight: 600; }
+.hcount {
+  background: rgba(255,255,255,0.15);
+  color: white;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+.header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sync-info { display: flex; align-items: center; }
+
+.add-box {
+  background: white;
+  border-bottom: 2px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.add-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.add-row input[type="text"] {
+  flex: 1; min-width: 120px;
+  padding: 9px 12px;
+  border: 2px solid var(--border);
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+}
+.add-row input[type="text"]:focus { border-color: var(--blue); }
+
+.seg { display: flex; border: 2px solid var(--border); border-radius: 7px; overflow: hidden; flex-shrink: 0; }
+.seg button {
+  padding: 7px 13px;
+  border: none;
+  background: white;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  transition: all 0.15s;
+}
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.a-ikea { background: var(--blue); color: var(--yellow); }
+.seg button.a-disari { background: var(--green); color: white; }
+.seg button.a-simdi { background: #e6a800; color: white; }
+.seg button.a-sonra { background: #5b7fd4; color: white; }
+
+.add-price-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.add-price-row input[type="number"] {
+  width: 110px; min-width: 90px;
+  padding: 9px 12px;
+  border: 2px solid var(--border);
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+}
+.add-price-row input[type="number"]:focus { border-color: var(--blue); }
+.add-price-row label { font-size: 13px; color: var(--muted); }
+.add-btn {
+  padding: 9px 20px;
+  background: var(--yellow);
+  color: var(--blue);
+  border: none;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: auto;
+}
+.gift-toggle {
+  display: inline-flex; align-items: center; gap: 4px;
+  cursor: pointer; font-size: 12px; font-weight: 700;
+  color: #c0006a; user-select: none;
+}
+.gift-toggle input { accent-color: #c0006a; width: 14px; height: 14px; cursor: pointer; }
+
+.filter-bar {
+  max-width: 900px;
+  margin: 12px auto 0;
+  padding: 0 8px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.filter-btn {
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 2px solid var(--border);
+  background: white;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--muted);
+}
+.filter-btn.active { border-color: var(--blue); color: var(--blue); background: #e8eeff; }
+.filter-label { font-size: 12px; color: var(--muted); }
+
+.table-wrap {
+  overflow-x: auto;
+  padding: 12px 8px 0;
+  max-width: 900px;
+  margin: 0 auto;
+}
+table.main-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+  box-shadow: 0 2px 16px rgba(0,48,135,0.08);
+  min-width: 520px;
+}
+thead tr.hrow1 th {
+  padding: 10px 6px 6px;
+  font-size: 12px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;
+}
+thead tr.hrow1 th.th-item { background: #f0f0ec; color: #444; text-align: left; padding-left: 14px; border-right: 2px solid var(--border); }
+thead tr.hrow1 th.th-ikea { background: var(--blue); color: var(--yellow); border-right: 2px solid #fff; }
+thead tr.hrow1 th.th-disari { background: var(--green); color: white; }
+thead tr.hrow2 th { padding: 7px 4px; font-size: 11px; font-weight: 700; text-align: center; border-bottom: 2px solid var(--border); }
+thead tr.hrow2 th.th-si { background: var(--now-bg); color: #b07800; border-right: 1px solid #e8d88a; }
+thead tr.hrow2 th.th-so { background: var(--later-bg); color: #3a5ab0; border-right: 2px solid var(--border); }
+thead tr.hrow2 th.th-si2 { background: var(--now-bg); color: #b07800; border-right: 1px solid #e8d88a; }
+thead tr.hrow2 th.th-so2 { background: var(--later-bg); color: #3a5ab0; }
+tbody tr { border-bottom: 1px solid #f0f0f0; }
+tbody tr:hover { background: #fafafa; }
+tbody td { padding: 8px 6px; vertical-align: middle; text-align: center; font-size: 14px; }
+tbody td.td-item { text-align: left; padding-left: 14px; border-right: 2px solid var(--border); font-size: 14px; font-weight: 600; color: #222; }
+td.c-si  { background: #fffcf0; border-right: 1px solid #f0ead0; }
+td.c-so  { background: #f5f7ff; border-right: 2px solid var(--border); }
+td.c-si2 { background: #fffcf0; border-right: 1px solid #f0ead0; }
+td.c-so2 { background: #f5f7ff; }
+
+.tick-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 2px solid #ccc; background: white; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 16px; transition: all 0.15s; color: #ccc;
+}
+.tick-btn::after { content: "○"; }
+.tick-btn.ticked { background: #22c55e; border-color: #22c55e; color: white; }
+.tick-btn.ticked::after { content: "✓"; font-weight: 900; }
+
+.price-val { display: block; font-size: 11px; color: var(--muted); margin-top: 3px; }
+.price-val.has-p { color: #333; font-weight: 700; }
+.gift-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: #fff0f6; color: #c0006a; border: 1px solid #f4b8d8;
+  border-radius: 4px; font-size: 10px; font-weight: 700; padding: 1px 5px; margin-top: 3px;
+}
+tbody tr.row-done td.td-item { text-decoration: line-through; color: #bbb; }
+
+.del-btn { background: none; border: none; cursor: pointer; color: #ddd; font-size: 15px; padding: 2px 3px; border-radius: 4px; }
+.del-btn:hover { color: #e74c3c; }
+.edit-btn { background: none; border: none; cursor: pointer; color: #ddd; font-size: 13px; padding: 2px 3px; border-radius: 4px; }
+.edit-btn:hover { color: var(--blue); }
+.item-name-wrap { display: flex; align-items: center; gap: 3px; }
+.item-name-edit { font-family: inherit; font-size: 13px; font-weight: 600; border: 1px solid var(--blue); border-radius: 4px; padding: 2px 6px; width: 110px; outline: none; }
+.mini-seg { display: flex; gap: 2px; margin-top: 5px; flex-wrap: wrap; }
+.mini-btn { font-size: 10px; padding: 1px 6px; border-radius: 3px; border: 1px solid #ccc; cursor: pointer; font-family: inherit; font-weight: 700; background: white; color: #888; }
+
+/* TOTALS */
+.totals-wrap { max-width: 900px; margin: 0 auto; padding: 0 8px 20px; overflow-x: auto; }
+table.tot-table { width: 100%; border-collapse: collapse; min-width: 520px; background: white; border-radius: 0 0 12px 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,48,135,0.1); }
+table.tot-table td { padding: 8px 6px; text-align: center; font-size: 13px; font-weight: 700; border-top: 1px solid #eee; }
+table.tot-table td.tot-lbl { text-align: left; padding-left: 14px; background: #f0f0ec; color: #444; border-right: 2px solid var(--border); font-size: 12px; }
+table.tot-table td.ts1 { background: #fff8d6; color: #b07800; border-right: 1px solid #e8d88a; }
+table.tot-table td.ts2 { background: #eaeeff; color: #3a5ab0; border-right: 2px solid var(--border); }
+table.tot-table td.ts3 { background: #fff8d6; color: #b07800; border-right: 1px solid #e8d88a; }
+table.tot-table td.ts4 { background: #eaeeff; color: #3a5ab0; }
+table.tot-table tr.grand-row td { background: #e0e8ff; color: #003087; font-size: 13px; font-weight: 900; border-top: 2px solid #b0c0ee; }
+table.tot-table tr.grand-row td.tot-lbl { background: #c8d4f8; color: #003087; }
+table.tot-table tr.super-grand-row td { background: var(--blue); color: white; font-size: 14px; font-weight: 900; border-top: 3px solid #001f5c; text-align: center; padding: 11px 6px; }
+table.tot-table tr.super-grand-row td.tot-lbl { background: #001f5c; color: var(--yellow); }
+
+.empty-row td { text-align: center; color: var(--muted); padding: 40px 20px !important; font-size: 14px; font-style: italic; }
+
+/* Loading overlay */
+#loadingOverlay {
+  position: fixed; inset: 0; background: rgba(0,48,135,0.85);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 999; color: white; font-size: 16px; gap: 12px;
+}
+#loadingOverlay .spinner {
+  width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3);
+  border-top-color: var(--yellow); border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <span>Firebase'e bağlanıyor...</span>
+</div>
+
+<header>
+  <div class="logo">IKEA</div>
+  <h1>Alışveriş Listesi</h1>
+  <div class="header-right">
+    <div class="sync-info">
+      <span class="sync-dot loading" id="syncDot"></span>
+      <span class="sync-label" id="syncLabel">Bağlanıyor</span>
+    </div>
+    <div class="hcount" id="hcount">0 ürün</div>
+  </div>
+</header>
+
+<div class="add-box">
+  <div class="add-row">
+    <input type="text" id="itemName" placeholder="Ürün adı..." />
+    <div class="seg">
+      <button id="btn-ikea" class="a-ikea" onclick="setStore('ikea')">IKEA</button>
+      <button id="btn-disari" onclick="setStore('disari')">Dışarıdan</button>
+    </div>
+    <div class="seg">
+      <button id="btn-simdi" class="a-simdi" onclick="setTime('simdi')">Şimdi</button>
+      <button id="btn-sonra" onclick="setTime('sonra')">Sonra</button>
+    </div>
+  </div>
+  <div class="add-price-row">
+    <label>Adet:</label>
+    <input type="number" id="itemQty" placeholder="1" min="1" step="1" value="1" style="width:70px;" />
+    <label>Fiyat (₺):</label>
+    <input type="number" id="itemPrice" placeholder="0.00" min="0" step="0.01" />
+    <label class="gift-toggle">
+      <input type="checkbox" id="itemGift" />
+      🎁 Hediye Çeki var
+    </label>
+    <button class="add-btn" onclick="addItem()">+ Ekle</button>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <span class="filter-label">Filtrele:</span>
+  <button class="filter-btn active" id="f-all" onclick="toggleFilter('all',this)">Tümü</button>
+  <button class="filter-btn" id="f-ikea" onclick="toggleFilter('ikea',this)">🛒 IKEA</button>
+  <button class="filter-btn" id="f-disari" onclick="toggleFilter('disari',this)">🏪 Dışarıdan</button>
+  <button class="filter-btn" id="f-simdi" onclick="toggleFilter('simdi',this)">⚡ Şimdi</button>
+  <button class="filter-btn" id="f-sonra" onclick="toggleFilter('sonra',this)">🕐 Sonra</button>
+  <button class="filter-btn" id="f-done" onclick="toggleFilter('done',this)">✓ Tamamlanan</button>
+  <button class="filter-btn" id="f-gift" onclick="toggleFilter('gift',this)" style="border-color:#f4b8d8;color:#c0006a;">🎁 Hediye Çeki</button>
+</div>
+
+<div class="filter-bar" style="margin-top:6px;">
+  <span class="filter-label">Sırala:</span>
+  <button class="filter-btn active" id="sort-ekle" onclick="setSort('ekle',this)">➕ Eklenme</button>
+  <button class="filter-btn" id="sort-az" onclick="setSort('az',this)">A → Z</button>
+  <button class="filter-btn" id="sort-za" onclick="setSort('za',this)">Z → A</button>
+  <button class="filter-btn" id="sort-fiyat-as" onclick="setSort('fiyat-as',this)">₺ Artan</button>
+  <button class="filter-btn" id="sort-fiyat-az" onclick="setSort('fiyat-az',this)">₺ Azalan</button>
+  <button class="filter-btn" id="sort-gift" onclick="setSort('gift',this)" style="border-color:#f4b8d8;color:#c0006a;">🎁 Hediye Çeki</button>
+</div>
+
+<div class="table-wrap">
+<table class="main-table">
+  <thead>
+    <tr class="hrow1">
+      <th class="th-item" rowspan="2">Ürün</th>
+      <th class="th-ikea" colspan="2">🛒 IKEA</th>
+      <th class="th-disari" colspan="2">🏪 Dışarıdan</th>
+    </tr>
+    <tr class="hrow2">
+      <th class="th-si">Şimdi</th>
+      <th class="th-so">Sonra</th>
+      <th class="th-si2">Şimdi</th>
+      <th class="th-so2">Sonra</th>
+    </tr>
+  </thead>
+  <tbody id="tableBody"></tbody>
+</table>
+</div>
+
+<div class="totals-wrap">
+<table class="tot-table">
+  <thead>
+    <tr class="hrow1">
+      <th class="th-item" rowspan="2" style="background:#f0f0ec;color:#444;text-align:left;padding-left:14px;border-right:2px solid #ddd;font-size:11px;font-weight:900;letter-spacing:1px;text-transform:uppercase;padding-top:8px;padding-bottom:6px;"></th>
+      <th class="th-ikea" colspan="2" style="background:#003087;color:#FFDA1A;font-size:11px;font-weight:900;letter-spacing:1px;text-transform:uppercase;padding:8px 6px 5px;text-align:center;border-right:2px solid #fff;">🛒 IKEA</th>
+      <th class="th-disari" colspan="2" style="background:#1a6b3c;color:white;font-size:11px;font-weight:900;letter-spacing:1px;text-transform:uppercase;padding:8px 6px 5px;text-align:center;">🏪 Dışarıdan</th>
+    </tr>
+    <tr class="hrow2">
+      <th class="th-si" style="background:#fffbe6;color:#b07800;font-size:10px;font-weight:700;text-align:center;padding:5px 4px;border-bottom:2px solid #ddd;border-right:1px solid #e8d88a;">Şimdi</th>
+      <th class="th-so" style="background:#f0f4ff;color:#3a5ab0;font-size:10px;font-weight:700;text-align:center;padding:5px 4px;border-bottom:2px solid #ddd;border-right:2px solid #ddd;">Sonra</th>
+      <th class="th-si2" style="background:#fffbe6;color:#b07800;font-size:10px;font-weight:700;text-align:center;padding:5px 4px;border-bottom:2px solid #ddd;border-right:1px solid #e8d88a;">Şimdi</th>
+      <th class="th-so2" style="background:#f0f4ff;color:#3a5ab0;font-size:10px;font-weight:700;text-align:center;padding:5px 4px;border-bottom:2px solid #ddd;">Sonra</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="tot-lbl">📦 Adet</td>
+      <td class="ts1" id="tc-is">—</td>
+      <td class="ts2" id="tc-io">—</td>
+      <td class="ts3" id="tc-ds">—</td>
+      <td class="ts4" id="tc-do">—</td>
+    </tr>
+    <tr>
+      <td class="tot-lbl">✅ Tamamlanan</td>
+      <td class="ts1" id="td-is">—</td>
+      <td class="ts2" id="td-io">—</td>
+      <td class="ts3" id="td-ds">—</td>
+      <td class="ts4" id="td-do">—</td>
+    </tr>
+    <tr>
+      <td class="tot-lbl">💰 Toplam (₺)</td>
+      <td class="ts1" id="tp-is">—</td>
+      <td class="ts2" id="tp-io">—</td>
+      <td class="ts3" id="tp-ds">—</td>
+      <td class="ts4" id="tp-do">—</td>
+    </tr>
+    <tr class="grand-row">
+      <td class="tot-lbl">🧮 Genel Toplam</td>
+      <td class="ts1" id="grand-is">—</td>
+      <td class="ts2" id="grand-io">—</td>
+      <td class="ts3" id="grand-ds">—</td>
+      <td class="ts4" id="grand-do">—</td>
+    </tr>
+    <tr class="super-grand-row">
+      <td class="tot-lbl">💳 HEPSİ</td>
+      <td colspan="2" id="super-ikea">IKEA: —</td>
+      <td colspan="2" id="super-disari">Dışarıdan: —</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, remove, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAkOBTFiYRo3CYYszLIqMAYFlZYzm7E60c",
+  authDomain: "alisveris-da3b5.firebaseapp.com",
+  projectId: "alisveris-da3b5",
+  storageBucket: "alisveris-da3b5.firebasestorage.app",
+  messagingSenderId: "148258853233",
+  appId: "1:148258853233:web:0ad9bfe5fa3227115d66d0",
+  databaseURL: "https://alisveris-da3b5-default-rtdb.firebaseio.com"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+const itemsRef = ref(db, 'items');
+
+// ── State ──────────────────────────────────────────
+let items = [];
+let selStore = 'ikea';
+let selTime  = 'simdi';
+let activeFilters = new Set();
+let curSort  = 'ekle';
+let editId   = null;
+
+// ── Firebase realtime listener ─────────────────────
+onValue(itemsRef, (snapshot) => {
+  const data = snapshot.val();
+  items = data ? Object.values(data) : [];
+  // id yoksa key'i id yap
+  items.forEach(i => { if (!i.id) i.id = Date.now(); });
+  setSyncStatus('ok');
+  document.getElementById('loadingOverlay').style.display = 'none';
+  render();
+}, (error) => {
+  setSyncStatus('err');
+  document.getElementById('loadingOverlay').style.display = 'none';
+});
+
+function setSyncStatus(s) {
+  const dot   = document.getElementById('syncDot');
+  const label = document.getElementById('syncLabel');
+  dot.className = 'sync-dot ' + s;
+  label.textContent = s === 'ok' ? 'Canlı' : s === 'err' ? 'Bağlantı yok' : 'Bağlanıyor';
+}
+
+// ── Firebase yazma ─────────────────────────────────
+function saveItem(item) {
+  set(ref(db, 'items/' + item.id), item);
+}
+function removeItem(id) {
+  remove(ref(db, 'items/' + id));
+}
+function updateItem(id, changes) {
+  update(ref(db, 'items/' + id), changes);
+}
+
+// ── UI Controls ────────────────────────────────────
+window.setStore = function(s) {
+  selStore = s;
+  document.getElementById('btn-ikea').className   = s==='ikea'   ? 'a-ikea'   : '';
+  document.getElementById('btn-disari').className = s==='disari' ? 'a-disari' : '';
+};
+window.setTime = function(t) {
+  selTime = t;
+  document.getElementById('btn-simdi').className = t==='simdi' ? 'a-simdi' : '';
+  document.getElementById('btn-sonra').className = t==='sonra' ? 'a-sonra' : '';
+};
+
+window.toggleFilter = function(f, btn) {
+  if (f === 'all') {
+    activeFilters.clear();
+  } else {
+    if (activeFilters.has(f)) activeFilters.delete(f);
+    else activeFilters.add(f);
+  }
+  ['all','ikea','disari','simdi','sonra','done','gift'].forEach(k => {
+    const el = document.getElementById('f-'+k);
+    if (!el) return;
+    el.classList.toggle('active', k==='all' ? activeFilters.size===0 : activeFilters.has(k));
+  });
+  render();
+};
+
+window.setSort = function(s, btn) {
+  curSort = s;
+  ['ekle','az','za','fiyat-as','fiyat-az','gift'].forEach(k => {
+    const el = document.getElementById('sort-'+k);
+    if (el) el.classList.remove('active');
+  });
+  btn.classList.add('active');
+  render();
+};
+
+// ── CRUD ───────────────────────────────────────────
+window.addItem = function() {
+  const name = document.getElementById('itemName').value.trim();
+  if (!name) { document.getElementById('itemName').focus(); return; }
+  const qty   = Math.max(1, parseInt(document.getElementById('itemQty').value) || 1);
+  const price = parseFloat(document.getElementById('itemPrice').value) || 0;
+  const gift  = document.getElementById('itemGift').checked;
+  const item  = { id: Date.now(), name, store: selStore, time: selTime, qty, price, gift, done: false };
+  saveItem(item);
+  document.getElementById('itemName').value  = '';
+  document.getElementById('itemQty').value   = '1';
+  document.getElementById('itemPrice').value = '';
+  document.getElementById('itemGift').checked = false;
+  document.getElementById('itemName').focus();
+};
+
+window.toggleDone = function(id) {
+  const it = items.find(i=>i.id===id);
+  if (it) updateItem(id, { done: !it.done });
+};
+window.deleteItem = function(id) {
+  if (!confirm('Sil?')) return;
+  removeItem(id);
+};
+window.startEdit = function(id) {
+  editId = id; render();
+  setTimeout(() => { const el=document.getElementById('ei-'+id); if(el){el.focus();el.select();} }, 10);
+};
+window.saveEdit = function(id) {
+  const nameEl  = document.getElementById('ei-'+id);
+  const priceEl = document.getElementById('ep-'+id);
+  const changes = {};
+  if (nameEl  && nameEl.value.trim())  changes.name  = nameEl.value.trim();
+  if (priceEl) changes.price = parseFloat(priceEl.value) || 0;
+  if (Object.keys(changes).length) updateItem(id, changes);
+  editId = null; render();
+};
+window.changeStore = function(id, s) { updateItem(id, { store: s }); };
+window.changeTime  = function(id, t) { updateItem(id, { time:  t }); };
+window.toggleGift  = function(id) {
+  const it = items.find(i=>i.id===id);
+  if (it) updateItem(id, { gift: !it.gift });
+};
+window.changeQty = function(id, delta) {
+  const it = items.find(i=>i.id===id);
+  if (it) {
+    const newQty = Math.max(1, (it.qty||1) + delta);
+    updateItem(id, { qty: newQty });
+  }
+};
+
+// ── Filtering & Sorting ───────────────────────────
+function getFiltered() {
+  let list = [...items];
+  if (activeFilters.size > 0) {
+    list = list.filter(item => {
+      if (activeFilters.has('ikea')   && item.store !== 'ikea')   return false;
+      if (activeFilters.has('disari') && item.store !== 'disari') return false;
+      if (activeFilters.has('simdi')  && item.time  !== 'simdi')  return false;
+      if (activeFilters.has('sonra')  && item.time  !== 'sonra')  return false;
+      if (activeFilters.has('done')   && !item.done)              return false;
+      if (activeFilters.has('gift')   && !item.gift)              return false;
+      return true;
+    });
+  }
+  if (curSort==='az')        list.sort((a,b)=>a.name.localeCompare(b.name,'tr'));
+  else if (curSort==='za')   list.sort((a,b)=>b.name.localeCompare(a.name,'tr'));
+  else if (curSort==='fiyat-as') list.sort((a,b)=>(a.price||0)-(b.price||0));
+  else if (curSort==='fiyat-az') list.sort((a,b)=>(b.price||0)-(a.price||0));
+  else if (curSort==='gift') list.sort((a,b)=>(b.gift?1:0)-(a.gift?1:0));
+  else list.sort((a,b)=>a.id-b.id);
+  return list;
+}
+
+// ── Render ─────────────────────────────────────────
+function makeCell(item, store, time) {
+  const cellClass = store==='ikea'
+    ? (time==='simdi'?'c-si':'c-so')
+    : (time==='simdi'?'c-si2':'c-so2');
+  if (item.store!==store || item.time!==time)
+    return `<td class="${cellClass}" style="opacity:.2;color:#ccc;">—</td>`;
+  const qty = item.qty || 1;
+  const priceStr = item.price > 0
+    ? `<span class="price-val has-p">₺${item.price.toFixed(2)}${qty>1?' × '+qty+' = ₺'+(item.price*qty).toFixed(2):''}</span>`
+    : `<span class="price-val">—</span>`;
+  const giftStr = item.gift ? `<span class="gift-badge">🎁 Hediye Çeki</span>` : '';
+  const qtyCtrl = `<div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-top:4px;">
+    <button onclick="changeQty(${item.id},-1)" style="width:22px;height:22px;border-radius:50%;border:1px solid #ccc;background:white;cursor:pointer;font-size:14px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;">−</button>
+    <span style="font-size:13px;font-weight:900;min-width:20px;text-align:center;">${qty}</span>
+    <button onclick="changeQty(${item.id},+1)" style="width:22px;height:22px;border-radius:50%;border:1px solid #ccc;background:white;cursor:pointer;font-size:14px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;">+</button>
+  </div>`;
+  return `<td class="${cellClass}">
+    <button class="tick-btn${item.done?' ticked':''}" onclick="toggleDone(${item.id})"></button>
+    ${qtyCtrl}
+    ${priceStr}${giftStr}
+  </td>`;
+}
+
+function render() {
+  const list = getFiltered();
+  const tbody = document.getElementById('tableBody');
+  document.getElementById('hcount').textContent = items.length + ' ürün';
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Ürün bulunamadı.</td></tr>';
+    updateTotals(); return;
+  }
+
+  tbody.innerHTML = list.map(item => {
+    const controls = `
+      <div class="mini-seg">
+        <button class="mini-btn" onclick="changeStore(${item.id},'ikea')" style="${item.store==='ikea'?'background:#003087;color:#FFDA1A;border-color:#003087':''}">IKEA</button>
+        <button class="mini-btn" onclick="changeStore(${item.id},'disari')" style="${item.store==='disari'?'background:#1a6b3c;color:white;border-color:#1a6b3c':''}">Dışarı</button>
+        <button class="mini-btn" onclick="changeTime(${item.id},'simdi')" style="${item.time==='simdi'?'background:#e6a800;color:white;border-color:#e6a800':''}">Şimdi</button>
+        <button class="mini-btn" onclick="changeTime(${item.id},'sonra')" style="${item.time==='sonra'?'background:#5b7fd4;color:white;border-color:#5b7fd4':''}">Sonra</button>
+      </div>
+      <button onclick="toggleGift(${item.id})" style="margin-top:5px;font-size:10px;padding:2px 8px;border-radius:4px;border:1px solid ${item.gift?'#c0006a':'#ddd'};background:${item.gift?'#fff0f6':'white'};color:${item.gift?'#c0006a':'#aaa'};font-weight:700;cursor:pointer;font-family:inherit;">🎁 ${item.gift?'Hediye Çeki ✓':'Hediye Çeki?'}</button>`;
+
+    const nameEl = editId===item.id
+      ? `<div style="display:flex;flex-direction:column;gap:4px;flex:1;">
+           <input class="item-name-edit" id="ei-${item.id}" value="${item.name.replace(/"/g,'&quot;')}"
+             onkeydown="if(event.key==='Enter')saveEdit(${item.id})" style="width:100%;" />
+           <div style="display:flex;align-items:center;gap:4px;">
+             <span style="font-size:11px;color:#888;">₺</span>
+             <input type="number" id="ep-${item.id}" value="${item.price||''}" placeholder="Fiyat"
+               min="0" step="0.01"
+               onkeydown="if(event.key==='Enter')saveEdit(${item.id})"
+               style="width:90px;font-size:12px;padding:2px 6px;border:1px solid var(--blue);border-radius:4px;font-family:inherit;outline:none;" />
+             <button onclick="saveEdit(${item.id})" style="font-size:11px;padding:2px 8px;border-radius:4px;border:none;background:var(--blue);color:white;font-weight:700;cursor:pointer;font-family:inherit;">✓ Kaydet</button>
+           </div>
+         </div>`
+      : `<span>${item.name}</span>`;
+
+    return `<tr class="${item.done?'row-done':''}">
+      <td class="td-item">
+        <div class="item-name-wrap">
+          ${nameEl}
+          <button class="edit-btn" onclick="startEdit(${item.id})">✏️</button>
+          <button class="del-btn" onclick="deleteItem(${item.id})">✕</button>
+        </div>
+        ${controls}
+      </td>
+      ${makeCell(item,'ikea','simdi')}
+      ${makeCell(item,'ikea','sonra')}
+      ${makeCell(item,'disari','simdi')}
+      ${makeCell(item,'disari','sonra')}
+    </tr>`;
+  }).join('');
+  updateTotals();
+}
+
+// ── Totals ─────────────────────────────────────────
+function fmt(n) { return n > 0 ? '₺'+n.toFixed(2) : '—'; }
+function totalPrice(arr) { return arr.reduce((a,i)=>a+((i.price||0)*(i.qty||1)),0); }
+function totalQty(arr)   { return arr.reduce((a,i)=>a+(i.qty||1),0); }
+function updateTotals() {
+  const cats = [
+    {s:'ikea',t:'simdi',cid:'is'},{s:'ikea',t:'sonra',cid:'io'},
+    {s:'disari',t:'simdi',cid:'ds'},{s:'disari',t:'sonra',cid:'do'}
+  ];
+  cats.forEach(({s,t,cid}) => {
+    const g = items.filter(i=>i.store===s&&i.time===t);
+    const d = g.filter(i=>i.done);
+    const p = totalPrice(g);
+    const q = totalQty(g);
+    const gc = g.filter(i=>i.gift).length;
+    document.getElementById('tc-'+cid).textContent = g.length ? `${g.length} ürün (${q} adet)` : '—';
+    document.getElementById('td-'+cid).textContent = d.length ? '✓ '+d.length : '—';
+    document.getElementById('tp-'+cid).innerHTML = gc>0
+      ? `${fmt(p)}<br><span style="color:#c0006a;font-size:10px;">🎁 ${gc}</span>` : fmt(p);
+  });
+  const grandCats = [
+    {s:'ikea',t:'simdi',cid:'grand-is'},{s:'ikea',t:'sonra',cid:'grand-io'},
+    {s:'disari',t:'simdi',cid:'grand-ds'},{s:'disari',t:'sonra',cid:'grand-do'}
+  ];
+  grandCats.forEach(({s,t,cid}) => {
+    const g = items.filter(i=>i.store===s&&i.time===t);
+    const p = totalPrice(g);
+    const gc = g.filter(i=>i.gift).length;
+    document.getElementById(cid).innerHTML = g.length
+      ? (p>0 ? `₺${p.toFixed(2)}${gc>0?`<br><span style="color:#c0006a;font-size:10px;">🎁${gc}</span>`:''}` : g.length+' ürün') : '—';
+  });
+  const gi = items.filter(i=>i.store==='ikea');
+  const gd = items.filter(i=>i.store==='disari');
+  const pi = totalPrice(gi);
+  const pd = totalPrice(gd);
+  const qi = totalQty(gi);
+  const qd = totalQty(gd);
+  document.getElementById('super-ikea').innerHTML = gi.length
+    ? `🛒 IKEA | ${gi.length} ürün · ${qi} adet${pi>0?' · ₺'+pi.toFixed(2):''}${gi.filter(i=>i.gift).length>0?' · 🎁'+gi.filter(i=>i.gift).length:''} · ✓${gi.filter(i=>i.done).length}` : '🛒 IKEA: —';
+  document.getElementById('super-disari').innerHTML = gd.length
+    ? `🏪 Dışarı | ${gd.length} ürün · ${qd} adet${pd>0?' · ₺'+pd.toFixed(2):''}${gd.filter(i=>i.gift).length>0?' · 🎁'+gd.filter(i=>i.gift).length:''} · ✓${gd.filter(i=>i.done).length}` : '🏪 Dışarıdan: —';
+}
+
+// ── Init ───────────────────────────────────────────
+document.getElementById('itemName').addEventListener('keydown', e => {
+  if (e.key==='Enter') window.addItem();
+});
+</script>
+</body>
+</html>
